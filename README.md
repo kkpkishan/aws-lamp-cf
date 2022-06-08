@@ -6,11 +6,11 @@
     <tr>
         <td width="100%" valign="top">
            <p>Creates an entire LAMP from scratch for Lab or Permanent.</p>
-           <h6>Create Details</h6>
+           <h6>Install a LAMP web server on the Amazon Linux AMI</h6>
            <ol>
-            <li>Insatnce Type</li>
+            <p>The following procedures help you install an Apache web server with PHP and MySQL support on your Amazon Linux instance (sometimes called a LAMP web server or LAMP stack). You can use this server to host a static website or deploy a dynamic PHP application that reads and writes information to a database.</p>
             <tr>
-                      <td nowrap width="200" valign="top">
+                      <td nowrap  valign="top">
             <table>
                 <tr>
                     <th align="left">Launch</th>
@@ -23,6 +23,7 @@
             </table>
         </td>
     </tr> 
+    </ol>
  </table>
 
 
