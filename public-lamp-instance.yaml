@@ -56,7 +56,7 @@ Parameters:
     Description: Name of an existing VPC
     Type: AWS::EC2::VPC::Id
   VPCSubnet:
-    Description: Name of an existing Subnet
+    Description: Name of an existing Public Subnet
     Type: AWS::EC2::Subnet::Id
   SystemsManagerAccess:
     Description: 'Enable AWS Systems Manager agent and authorization.'
