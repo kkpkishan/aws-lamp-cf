@@ -34,17 +34,23 @@ Metadata:
           - MaxKeepAliveRequests
           - TimeOut
       - Label:
-          default: "Database"
+          default: "Mariadb 10.5 Database"
         Parameters:
           - DBName
           - DBUser
           - DBPassword
           - DBRootPassword
       - Label:
+          default: "FTP Details"
+        Parameters:
+          - FTPUser
+          - FTPPassword
+      - Label:
           default: "Instance connection"
         Parameters:
           - KeyName
           - SSHLocation
+          - FTPLocation
 Description: 'AWS CloudFormation LAMP Setup'
 Parameters:
   ParentAlertStack:
@@ -55,7 +61,7 @@ Parameters:
     Description: Name of an existing VPC
     Type: AWS::EC2::VPC::Id
   VPCSubnet:
-    Description: Name of an existing Public Subnet
+    Description: Name of an existing Private Subnet
     Type: AWS::EC2::Subnet::Id
   SystemsManagerAccess:
     Description: 'Enable AWS Systems Manager agent and authorization.'
@@ -128,7 +134,23 @@ Parameters:
       characters.
     Description: The  database admin account username
     MaxLength: '16'
-    MinLength: '1'
+    MinLength: '3'
+    Type: String
+  FTPUser:
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: must begin with a letter and contain only alphanumeric
+      characters.
+    Description: The  FTP  account username
+    MaxLength: '16'
+    MinLength: '3'
+    Type: String
+  FTPPassword:
+    AllowedPattern: '[a-zA-Z0-9]+'
+    ConstraintDescription: must contain only alphanumeric characters.
+    Description: FTP User password
+    MaxLength: '41'
+    MinLength: '8'
+    NoEcho: 'true'
     Type: String
   EC2VolumeSizes:
     Description: 'Specifies the number of Lamp VolumeSize.'
@@ -185,6 +207,14 @@ Parameters:
     ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
     Default: 0.0.0.0/0
     Description: The IP address range that can be used to SSH to the EC2 instances
+    MaxLength: '18'
+    MinLength: '9'
+    Type: String
+  FTPLocation:
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+    Default: 0.0.0.0/0
+    Description: The IP address range that can be used to FTP to the EC2 instances
     MaxLength: '18'
     MinLength: '9'
     Type: String
@@ -331,6 +361,7 @@ Conditions:
 Resources:
   WebServer:
     Type: AWS::EC2::Instance
+    # DependsOn: IPAddress
     CreationPolicy:
       ResourceSignal:
         Timeout: PT15M
@@ -357,6 +388,8 @@ Resources:
                 mysql -u root --password='${DBRootPassword}' < /tmp/setup.mysql
               test: !Sub |
                 $(mysql ${DBName} -u root --password='${DBRootPassword}' >/dev/null 2>&1 </dev/null); (( $? !=0))
+            04_configure_ftp:
+              command: "./tmp/setup.ftp"
         install_cfn:
           files:
             /etc/cfn/cfn-hup.conf:
@@ -505,16 +538,52 @@ Resources:
                 phpinfo();
                 phpinfo(INFO_MODULES);
                 ?>
+              group: root
+              mode: '000755'
+              owner: root
+            /tmp/setup.ftp:
+              content: !Sub |
+                #!/bin/bash
+                sed -i 's/anonymous_enable=YES/anonymous_enable=NO/g' /etc/vsftpd/vsftpd.conf
+                sed -i 's/listen=NO/listen=YES/g' /etc/vsftpd/vsftpd.conf
+                sed -i 's/listen_ipv6=YES/listen_ipv6=NO/g' /etc/vsftpd/vsftpd.conf
+                PrivateIP=`curl http://169.254.169.254/latest/meta-data/local-ipv4`
+                cat <<EOF >> /etc/vsftpd/vsftpd.conf
+                chroot_local_user=YES
+                chroot_list_enable=YES
+                chroot_list_file=/etc/vsftpd/chroot_list
+                pasv_promiscuous=YES
+                pasv_max_port=24200
+                pasv_min_port=24000
+                pasv_address=$PrivateIP
+                EOF
+
+                cat <<EOF > /etc/vsftpd/chroot_list 
+                ${FTPUser}
+                EOF
+
+                useradd -m -d /var/www/html -s /bin/bash ${FTPUser} >/dev/null 2>&1
+                echo '${FTPUser}:${FTPPassword}' | sudo chpasswd
+                setfacl  -R -m u:${FTPUser}:rwx /var/www/
+                systemctl restart vsftpd
+                systemctl restart httpd
+              group: root
+              mode: '000750'
+              owner: root
           packages:
             yum:
               httpd: []
               awslogs: []
+              vsftpd: []
           services:
             sysvinit:
               httpd:
                 enabled: true
                 ensureRunning: true
               awslogsd:
+                enabled: true
+                ensureRunning: true
+              vsftpd:
                 enabled: true
                 ensureRunning: true
 
@@ -524,7 +593,7 @@ Resources:
       InstanceType:
         Ref: InstanceType
       NetworkInterfaces:
-        - AssociatePublicIpAddress: "true"
+        - AssociatePublicIpAddress: "false"
           DeviceIndex: "0"
           GroupSet:
             - Ref: "WebServerSecurityGroup"
@@ -554,7 +623,7 @@ Resources:
   WebServerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: "Enable HTTP access via port 80 locked down to the load balancer + SSH access"
+      GroupDescription: "Enable HTTP access via port 80 locked down to the load balancer + SSH access + FTP access"
       VpcId: !Ref VPCID
       SecurityGroupIngress:
       - CidrIp: 0.0.0.0/0
@@ -565,6 +634,28 @@ Resources:
         FromPort: 22
         IpProtocol: tcp
         ToPort: 22
+      - CidrIp: !Ref FTPLocation
+        FromPort: 21
+        IpProtocol: tcp
+        ToPort: 21
+      - CidrIp: !Ref FTPLocation
+        FromPort: 24000
+        IpProtocol: tcp
+        ToPort: 24200
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}'
+  # IPAddress:
+  #   Type: AWS::EC2::EIP
+  #   Properties:
+  #     Tags:
+  #       - Key: Name
+  #         Value: !Sub '${AWS::StackName}'
+  # IPAssoc:
+  #   Type: AWS::EC2::EIPAssociation
+  #   Properties:
+  #     InstanceId: !Ref 'WebServer'
+  #     EIP: !Ref 'IPAddress'
   Logs:
     Type: 'AWS::Logs::LogGroup'
     Properties:
@@ -625,7 +716,8 @@ Resources:
             - 'logs:CreateLogStream'
             - 'logs:PutLogEvents'
             - 'logs:DescribeLogStreams'
-            Resource: !GetAtt 'Logs.Arn'
+            Resource: 
+            - '*'
   InstanceProfile:
     Type: 'AWS::IAM::InstanceProfile'
     Properties:
@@ -689,9 +781,13 @@ Resources:
       - Name: InstanceId
         Value: !Ref WebServer
 Outputs:
-  PublicIP:
+  PrivateIP:
     Description: EC2 public IP
-    Value: !GetAtt WebServer.PublicIp
+    Value: !GetAtt WebServer.PrivateIp
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicIP'
   WebsiteURL:
     Description: Website
     Value: !Sub "http://${WebServer.PublicDnsName}"
+    Export:
+      Name: !Sub '${AWS::StackName}-WebsiteURL'

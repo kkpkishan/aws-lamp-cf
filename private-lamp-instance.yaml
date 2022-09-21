@@ -30,7 +30,6 @@ Metadata:
           default: "Apache"
         Parameters:
           - servername
-          - KeepAlive
           - KeepAliveTimeout
           - MaxKeepAliveRequests
           - TimeOut
@@ -83,13 +82,6 @@ Parameters:
     Default: 'example.com'
     Description: The value used for the Apache Vhost.
     Type: String
-  KeepAlive:
-    Description: 'Enable Apache KeepAlive.'
-    Type: String
-    Default: On
-    AllowedValues:
-    - On
-    - Off
   KeepAliveTimeout:
     Description: 'Specifies the number of Apache KeepAliveTimeout.'
     Type: Number
@@ -288,59 +280,59 @@ Mappings:
 
   AWSRegionArch2AMI:
     ap-northeast-1:
-      HVM64: ami-0a3d21ec6281df8cb
-      HVMARM: ami-0504a53108b30383c
+      HVM64: ami-0b7546e839d7ace12
+      HVMARM: ami-004332b441f90509b
     ap-northeast-2:
-      HVM64: ami-02de72c5dc79358c9
-      HVMARM: ami-0d0bd26f0eac17adc
+      HVM64: ami-0fd0765afb77bcca7
+      HVMARM: ami-05d1b0b938144501e
     ap-southeast-1:
-      HVM64: ami-0971b4b88a87adeef
-      HVMARM: ami-07bc7fadf3f01f5b0
+      HVM64: ami-0c802847a7dd848c0
+      HVMARM: ami-0ba00895a8997fcd0
     ap-southeast-2:
-      HVM64: ami-06a524880a10d79ba
-      HVMARM: ami-0065c2acf2325a66b
+      HVM64: ami-07620139298af599e
+      HVMARM: ami-007b3582fa22625ab
     eu-central-1:
-      HVM64: ami-01d9d7f15bbea00b7
-      HVMARM: ami-08e36aed47c900ed1
+      HVM64: ami-0a1ee2fb28fe05df3
+      HVMARM: ami-0ceb85bb30095410b
     eu-west-1:
-      HVM64: ami-0e8cb4bdc5bb2e6c0
-      HVMARM: ami-00cf3a525c4693c5f
+      HVM64: ami-0d71ea30463e0ff8d
+      HVMARM: ami-0a6b5206d1730bdce
     sa-east-1:
-      HVM64: ami-00d10ca79f70a302a
-      HVMARM: ami-0395bdf3134459735
+      HVM64: ami-037c192f0fa52a358
+      HVMARM: ami-02ec3b4c883c80b99
     us-east-1:
-      HVM64: ami-03ededff12e34e59e
-      HVMARM: ami-0482730ee38e3f893
+      HVM64: ami-0cff7528ff583bf9a
+      HVMARM: ami-00bf5f1c358708486
     us-west-1:
-      HVM64: ami-06542a822d33e2e40
-      HVMARM: ami-047d291a47ab1e381
+      HVM64: ami-0d9858aa3c6322f73
+      HVMARM: ami-0825c6b3598e9754d
     us-west-2:
-      HVM64: ami-0b36cd6786bcfe120
-      HVMARM: ami-0ae08d5be033614b8
+      HVM64: ami-098e42ae54c764c35
+      HVMARM: ami-08e93a9522bbe6df6
     eu-north-1:
-      HVM64: ami-058c02d7640104f1e
-      HVMARM: ami-05ed1bcf675aff93c
+      HVM64: ami-0917076ab9780844d
+      HVMARM: ami-0fbd1ecdaa0af2276
     ap-south-1:
-      HVM64: ami-0d2986f2e8c0f7d01
-      HVMARM: ami-01926c2687c8f098c
+      HVM64: ami-08df646e18b182346
+      HVMARM: ami-0e0aaf29e73155b91
     eu-west-3:
-      HVM64: ami-04a7df89e71c1c3c6
-      HVMARM: ami-05422bebdaf8e588f
+      HVM64: ami-0f5094faf16f004eb
+      HVMARM: ami-00f13602fa9acface
     eu-west-2:
-      HVM64: ami-034ef92d9dd822b08
-      HVMARM: ami-0c5f5fc4b4959dd02
+      HVM64: ami-078a289ddf4b09ae0
+      HVMARM: ami-08ebecb25179560f7
     ap-northeast-3:
-      HVM64: ami-0ed2c07424793e91f
-      HVMARM: ami-08af76d91e3e9c52c
+      HVM64: ami-0c66c8e259df7ec04
+      HVMARM: ami-0b5d1ddb8df5d0c8e
     me-south-1:
-      HVM64: ami-0f248e7a5bbd0a3e2
-      HVMARM: ami-00c066f98d6884d18
+      HVM64: ami-0bf69afb300c322eb
+      HVMARM: ami-099948c9b936d71a2
     ca-central-1:
-      HVM64: ami-000a431453ec36291
-      HVMARM: ami-07013df7446f9dee4
+      HVM64: ami-00f881f027a6d74a0
+      HVMARM: ami-0e4208b856d700843
     us-east-2:
-      HVM64: ami-0c7478fd229861c57
-      HVMARM: ami-05b66708e559c479b
+      HVM64: ami-02d1e544b84bf7502
+      HVMARM: ami-03e57de632660544c
 Conditions:
   HasSystemsManagerAccess: !Equals [!Ref SystemsManagerAccess, 'true']
   HasAlertTopic: !Not [!Equals [!Ref ParentAlertStack, '']]
@@ -437,11 +429,6 @@ Resources:
                 file = /var/log/maillog
                 log_stream_name = {instance_id}/var/log/maillog
                 log_group_name = ${Logs}
-                [messages]
-                datetime_format = %b %d %H:%M:%S
-                file = /var/log/messages
-                log_stream_name = {instance_id}/var/log/messages
-                log_group_name = ${Logs}
                 [secure]
                 datetime_format = %b %d %H:%M:%S
                 file = /var/log/secure
@@ -490,7 +477,7 @@ Resources:
                 <Files ~ "\.(css|js|html|htm|txt|json|xml)$">
                  SetOutputFilter DEFLATE
                 </Files>
-                KeepAlive ${KeepAlive}
+                KeepAlive On
                 KeepAliveTimeout ${KeepAliveTimeout}
                 MaxKeepAliveRequests ${MaxKeepAliveRequests}
                 TimeOut ${TimeOut}
