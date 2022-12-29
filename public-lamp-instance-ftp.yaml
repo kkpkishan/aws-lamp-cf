@@ -162,6 +162,9 @@ Parameters:
     - t3.small
     - t3.medium
     - t3.large
+    - t3a.small
+    - t3a.medium
+    - t3a.large
     - t4g.small
     - t4g.medium
     - t4g.large
@@ -277,7 +280,17 @@ Mappings:
     t3.nano:
       Arch: HVM64
     t3.small:
+      Arch: HVM64 
+    t3a.large:
       Arch: HVM64
+    t3a.medium:
+      Arch: HVM64
+    t3a.micro:
+      Arch: HVM64
+    t3a.nano:
+      Arch: HVM64
+    t3a.small:
+      Arch: HVM64  
     c6g.large:
       Arch: HVMARM
     c6g.xlarge:
@@ -738,6 +751,22 @@ Resources:
       - {'Fn::ImportValue': !Sub '${ParentAlertStack}-TopicARN'}
       OKActions:
       - {'Fn::ImportValue': !Sub '${ParentAlertStack}-TopicARN'}
+      Dimensions:
+      - Name: InstanceId
+        Value: !Ref WebServer
+  RecoveryAlarm:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      AlarmDescription: 'Recovering instance when underlying hardware fails.'
+      Namespace: 'AWS/EC2'
+      MetricName: StatusCheckFailed_System
+      Statistic: Minimum
+      Period: 60
+      EvaluationPeriods: 5
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 0
+      AlarmActions:
+      - !Sub 'arn:aws:automate:${AWS::Region}:ec2:recover'
       Dimensions:
       - Name: InstanceId
         Value: !Ref WebServer
