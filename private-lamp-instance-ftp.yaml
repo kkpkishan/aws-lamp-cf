@@ -100,7 +100,9 @@ Parameters:
     - php7.3
     - php7.4
     - php8.0 
-    Default: php7.2
+    - php8.1
+    - php8.2
+    Default: php8.2
     Description: PHP Version
     Type: String   
   DBName:
