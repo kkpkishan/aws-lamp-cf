@@ -563,6 +563,7 @@ Resources:
                 sed -i 's/listen=NO/listen=YES/g' /etc/vsftpd/vsftpd.conf
                 sed -i 's/listen_ipv6=YES/listen_ipv6=NO/g' /etc/vsftpd/vsftpd.conf
                 cat <<EOF >> /etc/vsftpd/vsftpd.conf
+                force_dot_files=YES
                 chroot_local_user=YES
                 chroot_list_enable=YES
                 chroot_list_file=/etc/vsftpd/chroot_list
