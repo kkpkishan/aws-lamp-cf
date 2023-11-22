@@ -551,6 +551,7 @@ Resources:
                 sed -i 's/listen_ipv6=YES/listen_ipv6=NO/g' /etc/vsftpd/vsftpd.conf
                 PrivateIP=`curl http://169.254.169.254/latest/meta-data/local-ipv4`
                 cat <<EOF >> /etc/vsftpd/vsftpd.conf
+                force_dot_files=YES
                 chroot_local_user=YES
                 chroot_list_enable=YES
                 chroot_list_file=/etc/vsftpd/chroot_list
