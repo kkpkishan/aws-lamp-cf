@@ -43,6 +43,7 @@ Metadata:
       - Label:
           default: "FTP Details"
         Parameters:
+          - EnableFTP
           - FTPUser
           - FTPPassword
       - Label:
@@ -149,6 +150,13 @@ Parameters:
     MaxLength: '16'
     MinLength: '3'
     Type: String
+  EnableFTP:
+    Description: "Specify whether to configure FTP services (true or false)."
+    Type: String
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
   FTPUser:
     AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
     ConstraintDescription: must begin with a letter and contain only alphanumeric
@@ -535,6 +543,7 @@ Conditions:
   HasPublicIp: !Equals [!Ref PublicIpAddress, "true"]
   HasSystemsManagerAccess: !Equals [!Ref SystemsManagerAccess, 'true']
   HasAlertTopic: !Not [!Equals [!Ref ParentAlertStack, '']]
+  ConfigureFTP: !Equals [!Ref EnableFTP, "true"]
 Resources:
   WebServer:
     Type: AWS::EC2::Instance
@@ -719,31 +728,34 @@ Resources:
               mode: '000755'
               owner: root
             /tmp/setup.ftp:
-              content: !Sub |
-                #!/bin/bash
-                sed -i 's/anonymous_enable=YES/anonymous_enable=NO/g' /etc/vsftpd/vsftpd.conf
-                sed -i 's/listen=NO/listen=YES/g' /etc/vsftpd/vsftpd.conf
-                sed -i 's/listen_ipv6=YES/listen_ipv6=NO/g' /etc/vsftpd/vsftpd.conf
-                cat <<EOF >> /etc/vsftpd/vsftpd.conf
-                chroot_local_user=YES
-                chroot_list_enable=YES
-                chroot_list_file=/etc/vsftpd/chroot_list
-                pasv_promiscuous=YES
-                pasv_max_port=24200
-                pasv_min_port=24000
-                pasv_address=${IPAddress}
-                EOF
-
-                cat <<EOF > /etc/vsftpd/chroot_list 
-                ${FTPUser}
-                EOF
-
-                useradd -m -d /var/www/html -s /bin/bash ${FTPUser} >/dev/null 2>&1
-                echo '${FTPUser}:${FTPPassword}' | sudo chpasswd
-                setfacl  -R -m u:${FTPUser}:rwx /var/www/
-                systemctl restart vsftpd
-                systemctl restart httpd
-                systemctl restart awslogsd
+              content: !If 
+                - ConfigureFTP
+                - !Sub |
+                    #!/bin/bash
+                    sed -i 's/anonymous_enable=YES/anonymous_enable=NO/g' /etc/vsftpd/vsftpd.conf
+                    sed -i 's/listen=NO/listen=YES/g' /etc/vsftpd/vsftpd.conf
+                    sed -i 's/listen_ipv6=YES/listen_ipv6=NO/g' /etc/vsftpd/vsftpd.conf
+                    cat <<EOF >> /etc/vsftpd/vsftpd.conf
+                    chroot_local_user=YES
+                    chroot_list_enable=YES
+                    chroot_list_file=/etc/vsftpd/chroot_list
+                    pasv_promiscuous=YES
+                    pasv_max_port=24200
+                    pasv_min_port=24000
+                    pasv_address=${IPAddress}
+                    EOF
+     
+                    cat <<EOF > /etc/vsftpd/chroot_list 
+                    ${FTPUser}
+                    EOF
+     
+                    useradd -m -d /var/www/html -s /bin/bash ${FTPUser} >/dev/null 2>&1
+                    echo '${FTPUser}:${FTPPassword}' | sudo chpasswd
+                    setfacl  -R -m u:${FTPUser}:rwx /var/www/
+                    systemctl restart vsftpd
+                    systemctl restart httpd
+                    systemctl restart awslogsd
+                - ''
               group: root
               mode: '000750'
               owner: root
@@ -751,7 +763,11 @@ Resources:
             yum:
               httpd: []
               awslogs: []
-              vsftpd: []
+              # vsftpd: []
+              vsftpd: !If
+                - ConfigureFTP
+                - [""]  
+                - !Ref "AWS::NoValue"  
           services:
             sysvinit:
               httpd:
@@ -761,8 +777,8 @@ Resources:
                 enabled: true
                 ensureRunning: false
               vsftpd:
-                enabled: true
-                ensureRunning: true
+                enabled: !If [ConfigureFTP, "true", "false"]
+                ensureRunning: !If [ConfigureFTP, "true", "false"]
 
     Properties:
       IamInstanceProfile: !Ref InstanceProfile
