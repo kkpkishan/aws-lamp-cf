@@ -7,7 +7,6 @@ Metadata:
           default: 'Parent Stacks'
         Parameters:
         - ParentAlertStack
-        - ECSOptmizedAMI
       - Label:
           default: "VPC"
         Parameters:
@@ -65,9 +64,6 @@ Parameters:
   VPCSubnet:
     Description: Name of an existing Public Subnet
     Type: AWS::EC2::Subnet::Id
-  ECSOptmizedAMI:
-    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
-    Default: /aws/service/ecs/optimized-ami/amazon-linux-2/recommended/image_id
   PublicIpAddress:
     Description: "Control whether instances should have a public IP address associated."
     Type: String
@@ -390,7 +386,6 @@ Conditions:
   HasPublicIp: !Equals [!Ref PublicIpAddress, "true"]
   HasSystemsManagerAccess: !Equals [!Ref SystemsManagerAccess, 'true']
   HasAlertTopic: !Not [!Equals [!Ref ParentAlertStack, '']]
-
 Resources:
   WebServer:
     Type: AWS::EC2::Instance
