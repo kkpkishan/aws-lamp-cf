@@ -16,6 +16,7 @@ Metadata:
           default: "SSM-CW"
         Parameters:
           - SystemsManagerAccess
+          - EnableAWSLogs
           - LogsRetentionInDays
       - Label:
           default: "Instance"
@@ -79,6 +80,13 @@ Parameters:
     AllowedValues:
     - true
     - false
+  EnableAWSLogs:
+    Description: "Specify whether to configure AWS CloudWatch logs services (true or false)."
+    Type: String
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
   LogsRetentionInDays:
     Description: 'Specifies the number of days you want to retain log events.'
     Type: Number
@@ -544,6 +552,7 @@ Conditions:
   HasSystemsManagerAccess: !Equals [!Ref SystemsManagerAccess, 'true']
   HasAlertTopic: !Not [!Equals [!Ref ParentAlertStack, '']]
   ConfigureFTP: !Equals [!Ref EnableFTP, "true"]
+  ConfigureAWSLogs: !Equals [!Ref EnableAWSLogs, "true"]
 Resources:
   WebServer:
     Type: AWS::EC2::Instance
@@ -606,47 +615,64 @@ Resources:
         awslogs:
           packages:
             yum:
-              awslogs: []
+              # awslogs: []
+              awslogs: !If
+                - ConfigureAWSLogs
+                - [""]  
+                - !Ref "AWS::NoValue"
           files:
-            '/etc/awslogs/awscli.conf':
-              content: !Sub |
-                [default]
-                region = ${AWS::Region}
-                [plugins]
-                cwlogs = cwlogs
-              mode: '000644'
-              owner: root
-              group: root
-            '/etc/awslogs/awslogs.conf':
-              content: !Sub |
-                [general]
-                state_file = /var/lib/awslogs/agent-state
-                [audit]
-                file = /var/log/audit/audit.log
-                log_stream_name = {instance_id}/var/log/audit/audit.log
-                log_group_name = ${Logs}
-                [boot]
-                file = /var/log/boot.log
-                log_stream_name = {instance_id}/var/log/boot.log
-                log_group_name = ${Logs}
-                [cron]
-                datetime_format = %b %d %H:%M:%S
-                file = /var/log/cron
-                log_stream_name = {instance_id}/var/log/cron
-                log_group_name = ${Logs}
-                [maillog]
-                datetime_format = %b %d %H:%M:%S
-                file = /var/log/maillog
-                log_stream_name = {instance_id}/var/log/maillog
-                log_group_name = ${Logs}
-                [secure]
-                datetime_format = %b %d %H:%M:%S
-                file = /var/log/secure
-                log_stream_name = {instance_id}/var/log/secure
-                log_group_name = ${Logs}
-              mode: '000644'
-              owner: root
-              group: root
+            # '/etc/awslogs/awscli.conf':
+            #   content: !Sub |
+            #     [default]
+            #     region = ${AWS::Region}
+            #     [plugins]
+            #     cwlogs = cwlogs
+            '/etc/awslogs/awscli.conf': !If
+              - ConfigureAWSLogs
+              - content: !Sub |
+                  [default]
+                  region = ${AWS::Region}
+                  [plugins]
+                  cwlogs = cwlogs
+                mode: '000644'
+                owner: root
+                group: root
+              - !Ref "AWS::NoValue"
+              # mode: '000644'
+              # owner: root
+              # group: root
+            '/etc/awslogs/awslogs.conf': !If
+              - ConfigureAWSLogs
+              - content: !Sub |
+                  [general]
+                  state_file = /var/lib/awslogs/agent-state
+                  [audit]
+                  file = /var/log/audit/audit.log
+                  log_stream_name = {instance_id}/var/log/audit/audit.log
+                  log_group_name = ${Logs}
+                  [boot]
+                  file = /var/log/boot.log
+                  log_stream_name = {instance_id}/var/log/boot.log
+                  log_group_name = ${Logs}
+                  [cron]
+                  datetime_format = %b %d %H:%M:%S
+                  file = /var/log/cron
+                  log_stream_name = {instance_id}/var/log/cron
+                  log_group_name = ${Logs}
+                  [maillog]
+                  datetime_format = %b %d %H:%M:%S
+                  file = /var/log/maillog
+                  log_stream_name = {instance_id}/var/log/maillog
+                  log_group_name = ${Logs}
+                  [secure]
+                  datetime_format = %b %d %H:%M:%S
+                  file = /var/log/secure
+                  log_stream_name = {instance_id}/var/log/secure
+                  log_group_name = ${Logs}
+                mode: '000644'
+                owner: root
+                group: root
+              - !Ref "AWS::NoValue"
             '/etc/awslogs/config/httpd.conf':
               content: !Sub |
                 [Apache-Access]
@@ -754,7 +780,7 @@ Resources:
                     setfacl  -R -m u:${FTPUser}:rwx /var/www/
                     systemctl restart vsftpd
                     systemctl restart httpd
-                    systemctl restart awslogsd
+                    # systemctl restart awslogsd
                 - ''
               group: root
               mode: '000750'
@@ -774,8 +800,8 @@ Resources:
                 enabled: true
                 ensureRunning: true
               awslogsd:
-                enabled: true
-                ensureRunning: false
+                enabled: !If [ConfigureAWSLogs, "true", "false"]
+                ensureRunning: !If [ConfigureAWSLogs, "true", "false"]
               vsftpd:
                 enabled: !If [ConfigureFTP, "true", "false"]
                 ensureRunning: !If [ConfigureFTP, "true", "false"]
