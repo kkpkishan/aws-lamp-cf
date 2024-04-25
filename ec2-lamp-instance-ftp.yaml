@@ -1020,7 +1020,7 @@ Resources:
 Outputs:
   PublicIP:
     Description: EC2 public IP
-    Value: !Ref 'IPAddress'
+    Value: !If [HasPublicIp, !Ref 'IPAddress', !Ref 'AWS::NoValue']
     Export:
       Name: !Sub '${AWS::StackName}-PublicIP'
   WebsiteURL:
