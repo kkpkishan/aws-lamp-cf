@@ -174,6 +174,11 @@ Parameters:
     AllowedValues: [8, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500, 600, 1024]
   InstanceType:
     AllowedValues:
+    - t2.micro
+    - t2.small
+    - t2.medium
+    - t2.large
+    - t2.xlarge
     - t3.small
     - t3.medium
     - t3.large
@@ -191,12 +196,44 @@ Parameters:
     - m6a.xlarge
     - m6a.2xlarge
     - m6a.4xlarge
-    - m6a.10xlarge
+    - m6a.8xlarge
+    - m6g.medium
+    - m6g.large
+    - m6g.xlarge
+    - m6g.2xlarge
+    - m6g.4xlarge
+    - m6g.8xlarge
+    - m7i.large
+    - m7i.xlarge
+    - m7i.2xlarge
+    - m7i.4xlarge
+    - m7i.8xlarge
+    - m7g.medium
+    - m7g.large
+    - m7g.xlarge
+    - m7g.2xlarge
+    - m7g.4xlarge
+    - m7g.8xlarge
     - c6i.large
     - c6i.xlarge
     - c6i.2xlarge
     - c6i.4xlarge
     - c6i.8xlarge
+    - c7i.large
+    - c7i.xlarge
+    - c7i.2xlarge
+    - c7i.4xlarge
+    - c7i.8xlarge
+    - c7a.large
+    - c7a.xlarge
+    - c7a.2xlarge
+    - c7a.4xlarge
+    - c7a.8xlarge
+    - c7g.medium
+    - c7g.large
+    - c7g.xlarge
+    - c7g.2xlarge
+    - c7g.4xlarge
     - c6a.large
     - c6a.xlarge
     - c6a.2xlarge
@@ -212,6 +249,21 @@ Parameters:
     - r6i.2xlarge
     - r6i.4xlarge
     - r6i.8xlarge
+    - r7i.large
+    - r7i.xlarge
+    - r7i.2xlarge
+    - r7i.4xlarge
+    - r7i.8xlarge
+    - r7a.large
+    - r7a.xlarge
+    - r7a.2xlarge
+    - r7a.4xlarge
+    - r7a.8xlarge
+    - r7g.large
+    - r7g.xlarge
+    - r7g.2xlarge
+    - r7g.4xlarge
+    - r7g.medium
     ConstraintDescription: must be a valid EC2 instance type.
     Default: t3.small
     Description: WebServer EC2 instance type
@@ -238,7 +290,7 @@ Parameters:
     Type: String
 Mappings:
   AWSInstanceType2Arch:
-    c6i.2xlarge:
+    c6i.2xlarge: 
       Arch: HVM64
     c6i.4xlarge:
       Arch: HVM64
@@ -247,6 +299,26 @@ Mappings:
     c6i.large:
       Arch: HVM64
     c6i.xlarge:
+      Arch: HVM64
+    c7i.2xlarge: 
+      Arch: HVM64
+    c7i.4xlarge:
+      Arch: HVM64
+    c7i.8xlarge:
+      Arch: HVM64
+    c7i.large:
+      Arch: HVM64
+    c7i.xlarge:
+      Arch: HVM64
+    c7a.2xlarge: 
+      Arch: HVM64
+    c7a.4xlarge:
+      Arch: HVM64
+    c7a.8xlarge:
+      Arch: HVM64
+    c7a.large:
+      Arch: HVM64
+    c7a.xlarge:
       Arch: HVM64
     c6a.2xlarge:
       Arch: HVM64
@@ -266,7 +338,7 @@ Mappings:
       Arch: HVM64
     m6i.xlarge:
       Arch: HVM64
-    m6a.10xlarge:
+    m6a.8xlarge:
       Arch: HVM64
     m6a.2xlarge:
       Arch: HVM64
@@ -286,26 +358,96 @@ Mappings:
       Arch: HVM64
     r6i.xlarge:
       Arch: HVM64
+    r7i.2xlarge:
+      Arch: HVM64
+    r7i.4xlarge:
+      Arch: HVM64
+    r7i.8xlarge:
+      Arch: HVM64
+    r7i.large:
+      Arch: HVM64
+    r7i.xlarge:
+      Arch: HVM64
+    r7a.2xlarge:
+      Arch: HVM64
+    r7a.4xlarge:
+      Arch: HVM64
+    r7a.8xlarge:
+      Arch: HVM64
+    r7a.large:
+      Arch: HVM64
+    r7a.xlarge:
+      Arch: HVM64
+    r7g.2xlarge:
+      Arch: HVMARM
+    r7g.4xlarge:
+      Arch: HVMARM
+    r7g.medium:
+      Arch: HVMARM
+    r7g.large:
+      Arch: HVMARM
+    r7g.xlarge:
+      Arch: HVMARM
     t3.large:
       Arch: HVM64
     t3.medium:
       Arch: HVM64
-    t3.micro:
-      Arch: HVM64
-    t3.nano:
-      Arch: HVM64
     t3.small:
       Arch: HVM64 
+    t3.micro:
+      Arch: HVM64
     t3a.large:
       Arch: HVM64
     t3a.medium:
       Arch: HVM64
+    t3a.small:
+      Arch: HVM64
     t3a.micro:
       Arch: HVM64
-    t3a.nano:
+    t2.micro:
       Arch: HVM64
-    t3a.small:
-      Arch: HVM64  
+    t2.small:
+      Arch: HVM64
+    t2.medium:
+      Arch: HVM64
+    t2.large:
+      Arch: HVM64
+    t2.xlarge:
+      Arch: HVM64
+    m6g.medium:
+      Arch: HVMARM
+    m6g.large:
+      Arch: HVMARM
+    m6g.xlarge:
+      Arch: HVMARM
+    m6g.2xlarge:
+      Arch: HVMARM
+    m6g.4xlarge:
+      Arch: HVMARM
+    m6g.8xlarge:
+      Arch: HVMARM
+    m7i.large:
+      Arch: HVM64
+    m7i.xlarge:
+      Arch: HVM64
+    m7i.2xlarge:
+      Arch: HVM64
+    m7i.4xlarge:
+      Arch: HVM64
+    m7i.8xlarge:
+      Arch: HVM64
+    m7g.medium:
+      Arch: HVMARM
+    m7g.large:
+      Arch: HVMARM
+    m7g.xlarge:
+      Arch: HVMARM
+    m7g.2xlarge:
+      Arch: HVMARM
+    m7g.4xlarge:
+      Arch: HVMARM
+    m7g.8xlarge:
+      Arch: HVMARM
     c6g.large:
       Arch: HVMARM
     c6g.xlarge:
@@ -316,7 +458,15 @@ Mappings:
       Arch: HVMARM
     c6g.8xlarge:
       Arch: HVMARM
-    t4g.nano:
+    c7g.2xlarge: 
+      Arch: HVMARM
+    c7g.4xlarge:
+      Arch: HVMARM
+    c7g.medium:
+      Arch: HVMARM
+    c7g.large:
+      Arch: HVMARM
+    c7g.xlarge:
       Arch: HVMARM
     t4g.micro:
       Arch: HVMARM
@@ -326,7 +476,6 @@ Mappings:
       Arch: HVMARM
     t4g.large:
       Arch: HVMARM
-
   AWSRegionArch2AMI:
     ap-northeast-1:
       HVM64: ami-0b7546e839d7ace12
