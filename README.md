@@ -21,12 +21,8 @@
                         <a href="https://console.aws.amazon.com/cloudformation/home?#/stacks/new?&templateURL=https://raw.githubusercontent.com/kkpkishan/AWS-SNS/master/alert.yaml" target="_blank"><img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png"></a>
                     </td>
                     <td>
-                        <p>Public Subnet LAMP</p>
+                        <p>EC2 Subnet LAMP</p>
                         <a href="https://console.aws.amazon.com/cloudformation/home?#/stacks/new?&templateURL=https://raw.githubusercontent.com/kkpkishan/aws-lamp-cf/main/public-lamp-instance.yaml" target="_blank"><img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png"></a>
-                    </td>
-                    <td>
-                        <p>Private Subnet LAMP</p>
-                        <a href="https://console.aws.amazon.com/cloudformation/home?#/stacks/new?&templateURL=https://raw.githubusercontent.com/kkpkishan/aws-lamp-cf/main/private-lamp-instance.yaml" target="_blank"><img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png"></a>
                     </td>
                 </tr>
             </table>
