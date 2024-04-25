@@ -49,9 +49,9 @@ Metadata:
           default: "Instance connection"
         Parameters:
           - KeyName
+          - PublicIpAddress
           - SSHLocation
           - FTPLocation
-          - PublicIpAddress
 Description: 'AWS CloudFormation LAMP Setup'
 Parameters:
   ParentAlertStack:
