@@ -556,7 +556,6 @@ Conditions:
 Resources:
   WebServer:
     Type: AWS::EC2::Instance
-    DependsOn: IPAddress
     CreationPolicy:
       ResourceSignal:
         Timeout: PT15M
@@ -761,6 +760,10 @@ Resources:
                     sed -i 's/anonymous_enable=YES/anonymous_enable=NO/g' /etc/vsftpd/vsftpd.conf
                     sed -i 's/listen=NO/listen=YES/g' /etc/vsftpd/vsftpd.conf
                     sed -i 's/listen_ipv6=YES/listen_ipv6=NO/g' /etc/vsftpd/vsftpd.conf
+                    IP_ADDRESS=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
+                    if [ -z "$IP_ADDRESS" ]; then
+                      IP_ADDRESS=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
+                    fi
                     cat <<EOF >> /etc/vsftpd/vsftpd.conf
                     chroot_local_user=YES
                     chroot_list_enable=YES
@@ -768,13 +771,11 @@ Resources:
                     pasv_promiscuous=YES
                     pasv_max_port=24200
                     pasv_min_port=24000
-                    pasv_address=${IPAddress}
                     EOF
-     
+                    echo "pasv_address=\$IP_ADDRESS" >> /etc/vsftpd/vsftpd.conf
                     cat <<EOF > /etc/vsftpd/chroot_list 
                     ${FTPUser}
                     EOF
-     
                     useradd -m -d /var/www/html -s /bin/bash ${FTPUser} >/dev/null 2>&1
                     echo '${FTPUser}:${FTPPassword}' | sudo chpasswd
                     setfacl  -R -m u:${FTPUser}:rwx /var/www/
@@ -866,12 +867,14 @@ Resources:
           Value: !Sub '${AWS::StackName}'
   IPAddress:
     Type: AWS::EC2::EIP
+    Condition: HasPublicIp
     Properties:
       Tags:
         - Key: Name
           Value: !Sub '${AWS::StackName}'
   IPAssoc:
     Type: AWS::EC2::EIPAssociation
+    Condition: HasPublicIp
     Properties:
       InstanceId: !Ref 'WebServer'
       EIP: !Ref 'IPAddress'
