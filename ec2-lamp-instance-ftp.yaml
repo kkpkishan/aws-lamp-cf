@@ -7,6 +7,7 @@ Metadata:
           default: 'Parent Stacks'
         Parameters:
         - ParentAlertStack
+        - ECSOptmizedAMI
       - Label:
           default: "VPC"
         Parameters:
@@ -34,18 +35,24 @@ Metadata:
           - MaxKeepAliveRequests
           - TimeOut
       - Label:
-          default: "Database"
+          default: "Mariadb 10.5 Database"
         Parameters:
           - DBName
           - DBUser
           - DBPassword
           - DBRootPassword
       - Label:
+          default: "FTP Details"
+        Parameters:
+          - FTPUser
+          - FTPPassword
+      - Label:
           default: "Instance connection"
         Parameters:
           - KeyName
           - SSHLocation
-          - VPCCidrBlock
+          - FTPLocation
+          - PublicIpAddress
 Description: 'AWS CloudFormation LAMP Setup'
 Parameters:
   ParentAlertStack:
@@ -56,16 +63,18 @@ Parameters:
     Description: Name of an existing VPC
     Type: AWS::EC2::VPC::Id
   VPCSubnet:
-    Description: Name of an existing Private Subnet
+    Description: Name of an existing Public Subnet
     Type: AWS::EC2::Subnet::Id
-  VPCCidrBlock:
-    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
-    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
-    Default: 172.31.0.0/16
-    Description: The IP address range that can be used to Apache to the EC2 instances
-    MaxLength: '18'
-    MinLength: '9'
+  ECSOptmizedAMI:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ecs/optimized-ami/amazon-linux-2/recommended/image_id
+  PublicIpAddress:
+    Description: "Control whether instances should have a public IP address associated."
     Type: String
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
   SystemsManagerAccess:
     Description: 'Enable AWS Systems Manager agent and authorization.'
     Type: String
@@ -76,7 +85,7 @@ Parameters:
   LogsRetentionInDays:
     Description: 'Specifies the number of days you want to retain log events.'
     Type: Number
-    Default: 14
+    Default: 7
     AllowedValues: [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653]
   servername:
     Default: 'example.com'
@@ -103,7 +112,7 @@ Parameters:
     - php7.3
     - php7.4
     - php8.0 
-    - php8.1 
+    - php8.1
     - php8.2 
     Default: php8.2
     Description: PHP Version
@@ -120,6 +129,7 @@ Parameters:
   DBPassword:
     AllowedPattern: '[a-zA-Z0-9]+'
     ConstraintDescription: must contain only alphanumeric characters.
+    Default: example1234
     Description: The  database admin account password
     MaxLength: '41'
     MinLength: '8'
@@ -128,6 +138,7 @@ Parameters:
   DBRootPassword:
     AllowedPattern: '[a-zA-Z0-9]+'
     ConstraintDescription: must contain only alphanumeric characters.
+    Default: example1234
     Description: MySQL root password
     MaxLength: '41'
     MinLength: '8'
@@ -137,9 +148,28 @@ Parameters:
     AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
     ConstraintDescription: must begin with a letter and contain only alphanumeric
       characters.
+    Default: admin
     Description: The  database admin account username
     MaxLength: '16'
-    MinLength: '1'
+    MinLength: '3'
+    Type: String
+  FTPUser:
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: must begin with a letter and contain only alphanumeric
+      characters.
+    Default: FTP
+    Description: The  FTP  account username
+    MaxLength: '16'
+    MinLength: '3'
+    Type: String
+  FTPPassword:
+    AllowedPattern: '[a-zA-Z0-9]+'
+    ConstraintDescription: must contain only alphanumeric characters.
+    Default: example1234
+    Description: FTP User password
+    MaxLength: '41'
+    MinLength: '8'
+    NoEcho: 'true'
     Type: String
   EC2VolumeSizes:
     Description: 'Specifies the number of Lamp VolumeSize.'
@@ -151,6 +181,9 @@ Parameters:
     - t3.small
     - t3.medium
     - t3.large
+    - t3a.small
+    - t3a.medium
+    - t3a.large
     - t4g.small
     - t4g.medium
     - t4g.large
@@ -194,8 +227,16 @@ Parameters:
   SSHLocation:
     AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
     ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
-    Default: 10.0.0.0/16
+    Default: 0.0.0.0/0
     Description: The IP address range that can be used to SSH to the EC2 instances
+    MaxLength: '18'
+    MinLength: '9'
+    Type: String
+  FTPLocation:
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+    Default: 0.0.0.0/0
+    Description: The IP address range that can be used to FTP to the EC2 instances
     MaxLength: '18'
     MinLength: '9'
     Type: String
@@ -258,7 +299,17 @@ Mappings:
     t3.nano:
       Arch: HVM64
     t3.small:
+      Arch: HVM64 
+    t3a.large:
       Arch: HVM64
+    t3a.medium:
+      Arch: HVM64
+    t3a.micro:
+      Arch: HVM64
+    t3a.nano:
+      Arch: HVM64
+    t3a.small:
+      Arch: HVM64  
     c6g.large:
       Arch: HVMARM
     c6g.xlarge:
@@ -336,12 +387,14 @@ Mappings:
       HVM64: ami-02d1e544b84bf7502
       HVMARM: ami-03e57de632660544c
 Conditions:
+  HasPublicIp: !Equals [!Ref PublicIpAddress, "true"]
   HasSystemsManagerAccess: !Equals [!Ref SystemsManagerAccess, 'true']
   HasAlertTopic: !Not [!Equals [!Ref ParentAlertStack, '']]
 
 Resources:
   WebServer:
     Type: AWS::EC2::Instance
+    DependsOn: IPAddress
     CreationPolicy:
       ResourceSignal:
         Timeout: PT15M
@@ -368,6 +421,8 @@ Resources:
                 mysql -u root --password='${DBRootPassword}' < /tmp/setup.mysql
               test: !Sub |
                 $(mysql ${DBName} -u root --password='${DBRootPassword}' >/dev/null 2>&1 </dev/null); (( $? !=0))
+            04_configure_ftp:
+              command: "./tmp/setup.ftp"
         install_cfn:
           files:
             /etc/cfn/cfn-hup.conf:
@@ -516,16 +571,52 @@ Resources:
                 phpinfo();
                 phpinfo(INFO_MODULES);
                 ?>
+              group: root
+              mode: '000755'
+              owner: root
+            /tmp/setup.ftp:
+              content: !Sub |
+                #!/bin/bash
+                sed -i 's/anonymous_enable=YES/anonymous_enable=NO/g' /etc/vsftpd/vsftpd.conf
+                sed -i 's/listen=NO/listen=YES/g' /etc/vsftpd/vsftpd.conf
+                sed -i 's/listen_ipv6=YES/listen_ipv6=NO/g' /etc/vsftpd/vsftpd.conf
+                cat <<EOF >> /etc/vsftpd/vsftpd.conf
+                chroot_local_user=YES
+                chroot_list_enable=YES
+                chroot_list_file=/etc/vsftpd/chroot_list
+                pasv_promiscuous=YES
+                pasv_max_port=24200
+                pasv_min_port=24000
+                pasv_address=${IPAddress}
+                EOF
+
+                cat <<EOF > /etc/vsftpd/chroot_list 
+                ${FTPUser}
+                EOF
+
+                useradd -m -d /var/www/html -s /bin/bash ${FTPUser} >/dev/null 2>&1
+                echo '${FTPUser}:${FTPPassword}' | sudo chpasswd
+                setfacl  -R -m u:${FTPUser}:rwx /var/www/
+                systemctl restart vsftpd
+                systemctl restart httpd
+                systemctl restart awslogsd
+              group: root
+              mode: '000750'
+              owner: root
           packages:
             yum:
               httpd: []
               awslogs: []
+              vsftpd: []
           services:
             sysvinit:
               httpd:
                 enabled: true
                 ensureRunning: true
               awslogsd:
+                enabled: true
+                ensureRunning: false
+              vsftpd:
                 enabled: true
                 ensureRunning: true
 
@@ -535,7 +626,7 @@ Resources:
       InstanceType:
         Ref: InstanceType
       NetworkInterfaces:
-        - AssociatePublicIpAddress: "false"
+        - AssociatePublicIpAddress: !If [HasPublicIp, "false", "true"]
           DeviceIndex: "0"
           GroupSet:
             - Ref: "WebServerSecurityGroup"
@@ -568,7 +659,7 @@ Resources:
       GroupDescription: "Enable HTTP access via port 80 locked down to the load balancer + SSH access"
       VpcId: !Ref VPCID
       SecurityGroupIngress:
-      - CidrIp: !Ref VPCCidrBlock
+      - CidrIp: 0.0.0.0/0
         FromPort: 80
         IpProtocol: tcp
         ToPort: 80
@@ -576,6 +667,28 @@ Resources:
         FromPort: 22
         IpProtocol: tcp
         ToPort: 22
+      - CidrIp: !Ref FTPLocation
+        FromPort: 21
+        IpProtocol: tcp
+        ToPort: 21
+      - CidrIp: !Ref FTPLocation
+        FromPort: 24000
+        IpProtocol: tcp
+        ToPort: 24200
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}'
+  IPAddress:
+    Type: AWS::EC2::EIP
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}'
+  IPAssoc:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      InstanceId: !Ref 'WebServer'
+      EIP: !Ref 'IPAddress'
   Logs:
     Type: 'AWS::Logs::LogGroup'
     Properties:
@@ -642,22 +755,6 @@ Resources:
     Properties:
       Roles:
       - !Ref IAMRole
-  RecoveryAlarm:
-    Type: 'AWS::CloudWatch::Alarm'
-    Properties:
-      AlarmDescription: 'Recovering instance when underlying hardware fails.'
-      Namespace: 'AWS/EC2'
-      MetricName: StatusCheckFailed_System
-      Statistic: Minimum
-      Period: 60
-      EvaluationPeriods: 5
-      ComparisonOperator: GreaterThanThreshold
-      Threshold: 0
-      AlarmActions:
-      - !Sub 'arn:aws:automate:${AWS::Region}:ec2:recover'
-      Dimensions:
-      - Name: InstanceId
-        Value: !Ref WebServer
   CPUTooHighAlarm:
     Condition: HasAlertTopic
     Type: 'AWS::CloudWatch::Alarm'
@@ -674,6 +771,22 @@ Resources:
       - {'Fn::ImportValue': !Sub '${ParentAlertStack}-TopicARN'}
       OKActions:
       - {'Fn::ImportValue': !Sub '${ParentAlertStack}-TopicARN'}
+      Dimensions:
+      - Name: InstanceId
+        Value: !Ref WebServer
+  RecoveryAlarm:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      AlarmDescription: 'Recovering instance when underlying hardware fails.'
+      Namespace: 'AWS/EC2'
+      MetricName: StatusCheckFailed_System
+      Statistic: Minimum
+      Period: 60
+      EvaluationPeriods: 5
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 0
+      AlarmActions:
+      - !Sub 'arn:aws:automate:${AWS::Region}:ec2:recover'
       Dimensions:
       - Name: InstanceId
         Value: !Ref WebServer
@@ -718,7 +831,11 @@ Resources:
 Outputs:
   PublicIP:
     Description: EC2 public IP
-    Value: !GetAtt WebServer.PublicIp
+    Value: !Ref 'IPAddress'
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicIP'
   WebsiteURL:
     Description: Website
     Value: !Sub "http://${WebServer.PublicDnsName}"
+    Export:
+      Name: !Sub '${AWS::StackName}-WebsiteURL'
