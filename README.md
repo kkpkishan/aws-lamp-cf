@@ -1,4 +1,4 @@
-# AWS  LAMP Templates
+# AWS LAMP Templates
 <table width="100%">
     <tr>
         <th align="left" colspan="2"><h4><a href="https://github.com/kkpkishan/aws-lamp-cf.git"> LAMP</a></h4></th>
@@ -31,4 +31,19 @@
     </ol>
  </table>
 
+## Additional Configuration for VSFTPD
+If you enable VSFTPD and have a public IP address enabled, it is necessary to update the public IP address in the VSFTPD configuration file. Please follow these steps:
 
+1. Open the VSFTPD configuration file:
+   ```bash
+   sudo nano /etc/vsftpd/vsftpd.conf
+   ```
+2. Add the following line to the end of the file, replacing `xx.xx.xx.xx` with your actual public IP address:
+   ```bash
+   pasv_address=xx.xx.xx.xx
+   ```
+3. Save the file and exit the editor.
+4. Restart the VSFTPD service to apply the changes:
+   ```bash
+   sudo systemctl restart vsftpd.service
+   ```
