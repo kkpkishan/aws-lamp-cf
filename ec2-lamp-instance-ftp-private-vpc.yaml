@@ -1,0 +1,880 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Metadata:
+  License: Apache-2.0
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: 'Parent Stacks'
+        Parameters:
+        - ParentAlertStack
+      - Label:
+          default: "VPC"
+        Parameters:
+          - VPCID
+          - VPCSubnet
+      - Label:
+          default: "SSM-CW"
+        Parameters:
+          - SystemsManagerAccess
+      - Label:
+          default: "Instance"
+        Parameters:
+          - InstanceType
+          - EC2VolumeSizes
+      - Label:
+          default: "PHP"
+        Parameters:
+          - PHPVersion
+      - Label:
+          default: "Apache"
+        Parameters:
+          - servername
+          - KeepAliveTimeout
+          - MaxKeepAliveRequests
+          - TimeOut
+      - Label:
+          default: "Mariadb 10.5 Database"
+        Parameters:
+          - DBName
+          - DBUser
+          - DBPassword
+          - DBRootPassword
+      - Label:
+          default: "FTP Details"
+        Parameters:
+          - EnableFTP
+          - FTPUser
+          - FTPPassword
+      - Label:
+          default: "Instance connection"
+        Parameters:
+          - KeyName
+          - SSHLocation
+          - FTPLocation
+Description: 'AWS CloudFormation LAMP Setup'
+Parameters:
+  ParentAlertStack:
+    Description: 'Optional but recommended stack name of parent alert stack based on https://github.com/kkpkishan/AWS-SNS/blob/master/alert.yaml template.'
+    Type: String
+    Default: ''
+  VPCID:
+    Description: Name of an existing VPC
+    Type: AWS::EC2::VPC::Id
+  VPCSubnet:
+    Description: Name of an existing Public Subnet
+    Type: AWS::EC2::Subnet::Id
+  SystemsManagerAccess:
+    Description: 'Enable AWS Systems Manager agent and authorization.'
+    Type: String
+    Default: true
+    AllowedValues:
+    - true
+    - false
+  servername:
+    Default: 'example.com'
+    Description: The value used for the Apache Vhost.
+    Type: String
+  KeepAliveTimeout:
+    Description: 'Specifies the number of Apache KeepAliveTimeout.'
+    Type: Number
+    Default: 15
+    AllowedValues: [15, 30, 60, 120, 180, 300, 360]
+  MaxKeepAliveRequests:
+    Description: 'Specifies the number of Apache MaxKeepAliveRequests.'
+    Type: Number
+    Default: 200
+    AllowedValues: [200, 400, 500, 1000, 1200, 1500, 200]
+  TimeOut:
+    Description: 'Specifies the number of Apache TimeOut.'
+    Type: Number
+    Default: 60
+    AllowedValues: [60, 120, 180, 300, 360]
+  PHPVersion:
+    AllowedValues:
+    - 8.1 
+    - 8.2
+    - 8.3
+    - 8.4
+    Default: 8.2
+    Description: PHP Version
+    Type: String   
+  DBName:
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: must begin with a letter and contain only alphanumeric
+      characters.
+    Default: example
+    Description: The example database name
+    MaxLength: '64'
+    MinLength: '1'
+    Type: String
+  DBPassword:
+    AllowedPattern: '[a-zA-Z0-9]+'
+    ConstraintDescription: must contain only alphanumeric characters.
+    Default: example1234
+    Description: The  database admin account password
+    MaxLength: '41'
+    MinLength: '8'
+    NoEcho: 'true'
+    Type: String
+  DBRootPassword:
+    AllowedPattern: '[a-zA-Z0-9]+'
+    ConstraintDescription: must contain only alphanumeric characters.
+    Default: example1234
+    Description: MySQL root password
+    MaxLength: '41'
+    MinLength: '8'
+    NoEcho: 'true'
+    Type: String
+  DBUser:
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: must begin with a letter and contain only alphanumeric
+      characters.
+    Default: admin
+    Description: The  database admin account username
+    MaxLength: '16'
+    MinLength: '3'
+    Type: String
+  EnableFTP:
+    Description: "Specify whether to configure FTP services (true or false)."
+    Type: String
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+  FTPUser:
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: must begin with a letter and contain only alphanumeric
+      characters.
+    Default: FTP
+    Description: The  FTP  account username
+    MaxLength: '16'
+    MinLength: '3'
+    Type: String
+  FTPPassword:
+    AllowedPattern: '[a-zA-Z0-9]+'
+    ConstraintDescription: must contain only alphanumeric characters.
+    Default: example1234
+    Description: FTP User password
+    MaxLength: '41'
+    MinLength: '8'
+    NoEcho: 'true'
+    Type: String
+  EC2VolumeSizes:
+    Description: 'Specifies the number of Lamp VolumeSize.'
+    Type: Number
+    Default: 8
+    AllowedValues: [8, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500, 600, 1024]
+  InstanceType:
+    AllowedValues:
+    - t2.micro
+    - t2.small
+    - t2.medium
+    - t2.large
+    - t2.xlarge
+    - t3.small
+    - t3.medium
+    - t3.large
+    - t3a.small
+    - t3a.medium
+    - t3a.large
+    - t4g.small
+    - t4g.medium
+    - t4g.large
+    - m6i.medium
+    - m6i.large
+    - m6i.xlarge
+    - m6i.2xlarge
+    - m6a.large
+    - m6a.xlarge
+    - m6a.2xlarge
+    - m6a.4xlarge
+    - m6a.8xlarge
+    - m6g.medium
+    - m6g.large
+    - m6g.xlarge
+    - m6g.2xlarge
+    - m6g.4xlarge
+    - m6g.8xlarge
+    - m7i.large
+    - m7i.xlarge
+    - m7i.2xlarge
+    - m7i.4xlarge
+    - m7i.8xlarge
+    - m7g.medium
+    - m7g.large
+    - m7g.xlarge
+    - m7g.2xlarge
+    - m7g.4xlarge
+    - m7g.8xlarge
+    - c6i.large
+    - c6i.xlarge
+    - c6i.2xlarge
+    - c6i.4xlarge
+    - c6i.8xlarge
+    - c7i.large
+    - c7i.xlarge
+    - c7i.2xlarge
+    - c7i.4xlarge
+    - c7i.8xlarge
+    - c7a.large
+    - c7a.xlarge
+    - c7a.2xlarge
+    - c7a.4xlarge
+    - c7a.8xlarge
+    - c7g.medium
+    - c7g.large
+    - c7g.xlarge
+    - c7g.2xlarge
+    - c7g.4xlarge
+    - c6a.large
+    - c6a.xlarge
+    - c6a.2xlarge
+    - c6a.4xlarge
+    - c6a.8xlarge
+    - c6g.large
+    - c6g.xlarge
+    - c6g.2xlarge
+    - c6g.4xlarge
+    - c6g.8xlarge
+    - r6i.large
+    - r6i.xlarge
+    - r6i.2xlarge
+    - r6i.4xlarge
+    - r6i.8xlarge
+    - r7i.large
+    - r7i.xlarge
+    - r7i.2xlarge
+    - r7i.4xlarge
+    - r7i.8xlarge
+    - r7a.large
+    - r7a.xlarge
+    - r7a.2xlarge
+    - r7a.4xlarge
+    - r7a.8xlarge
+    - r7g.large
+    - r7g.xlarge
+    - r7g.2xlarge
+    - r7g.4xlarge
+    - r7g.medium
+    ConstraintDescription: must be a valid EC2 instance type.
+    Default: t3.small
+    Description: WebServer EC2 instance type
+    Type: String
+  KeyName:
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instances
+    Type: AWS::EC2::KeyPair::KeyName
+  SSHLocation:
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+    Default: 0.0.0.0/0
+    Description: The IP address range that can be used to SSH to the EC2 instances
+    MaxLength: '18'
+    MinLength: '9'
+    Type: String
+  FTPLocation:
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+    Default: 0.0.0.0/0
+    Description: The IP address range that can be used to FTP to the EC2 instances
+    MaxLength: '18'
+    MinLength: '9'
+    Type: String
+Mappings:
+  AWSInstanceType2Arch:
+    c6i.2xlarge: 
+      Arch: HVM64
+    c6i.4xlarge:
+      Arch: HVM64
+    c6i.8xlarge:
+      Arch: HVM64
+    c6i.large:
+      Arch: HVM64
+    c6i.xlarge:
+      Arch: HVM64
+    c7i.2xlarge: 
+      Arch: HVM64
+    c7i.4xlarge:
+      Arch: HVM64
+    c7i.8xlarge:
+      Arch: HVM64
+    c7i.large:
+      Arch: HVM64
+    c7i.xlarge:
+      Arch: HVM64
+    c7a.2xlarge: 
+      Arch: HVM64
+    c7a.4xlarge:
+      Arch: HVM64
+    c7a.8xlarge:
+      Arch: HVM64
+    c7a.large:
+      Arch: HVM64
+    c7a.xlarge:
+      Arch: HVM64
+    c6a.2xlarge:
+      Arch: HVM64
+    c6a.4xlarge:
+      Arch: HVM64
+    c6a.8xlarge:
+      Arch: HVM64
+    c6a.large:
+      Arch: HVM64
+    c6a.xlarge:
+      Arch: HVM64
+    m6i.2xlarge:
+      Arch: HVM64
+    m6i.large:
+      Arch: HVM64
+    m6i.medium:
+      Arch: HVM64
+    m6i.xlarge:
+      Arch: HVM64
+    m6a.8xlarge:
+      Arch: HVM64
+    m6a.2xlarge:
+      Arch: HVM64
+    m6a.4xlarge:
+      Arch: HVM64
+    m6a.large:
+      Arch: HVM64
+    m6a.xlarge:
+      Arch: HVM64
+    r6i.2xlarge:
+      Arch: HVM64
+    r6i.4xlarge:
+      Arch: HVM64
+    r6i.8xlarge:
+      Arch: HVM64
+    r6i.large:
+      Arch: HVM64
+    r6i.xlarge:
+      Arch: HVM64
+    r7i.2xlarge:
+      Arch: HVM64
+    r7i.4xlarge:
+      Arch: HVM64
+    r7i.8xlarge:
+      Arch: HVM64
+    r7i.large:
+      Arch: HVM64
+    r7i.xlarge:
+      Arch: HVM64
+    r7a.2xlarge:
+      Arch: HVM64
+    r7a.4xlarge:
+      Arch: HVM64
+    r7a.8xlarge:
+      Arch: HVM64
+    r7a.large:
+      Arch: HVM64
+    r7a.xlarge:
+      Arch: HVM64
+    r7g.2xlarge:
+      Arch: HVMARM
+    r7g.4xlarge:
+      Arch: HVMARM
+    r7g.medium:
+      Arch: HVMARM
+    r7g.large:
+      Arch: HVMARM
+    r7g.xlarge:
+      Arch: HVMARM
+    t3.large:
+      Arch: HVM64
+    t3.medium:
+      Arch: HVM64
+    t3.small:
+      Arch: HVM64 
+    t3.micro:
+      Arch: HVM64
+    t3a.large:
+      Arch: HVM64
+    t3a.medium:
+      Arch: HVM64
+    t3a.small:
+      Arch: HVM64
+    t3a.micro:
+      Arch: HVM64
+    t2.micro:
+      Arch: HVM64
+    t2.small:
+      Arch: HVM64
+    t2.medium:
+      Arch: HVM64
+    t2.large:
+      Arch: HVM64
+    t2.xlarge:
+      Arch: HVM64
+    m6g.medium:
+      Arch: HVMARM
+    m6g.large:
+      Arch: HVMARM
+    m6g.xlarge:
+      Arch: HVMARM
+    m6g.2xlarge:
+      Arch: HVMARM
+    m6g.4xlarge:
+      Arch: HVMARM
+    m6g.8xlarge:
+      Arch: HVMARM
+    m7i.large:
+      Arch: HVM64
+    m7i.xlarge:
+      Arch: HVM64
+    m7i.2xlarge:
+      Arch: HVM64
+    m7i.4xlarge:
+      Arch: HVM64
+    m7i.8xlarge:
+      Arch: HVM64
+    m7g.medium:
+      Arch: HVMARM
+    m7g.large:
+      Arch: HVMARM
+    m7g.xlarge:
+      Arch: HVMARM
+    m7g.2xlarge:
+      Arch: HVMARM
+    m7g.4xlarge:
+      Arch: HVMARM
+    m7g.8xlarge:
+      Arch: HVMARM
+    c6g.large:
+      Arch: HVMARM
+    c6g.xlarge:
+      Arch: HVMARM
+    c6g.2xlarge:
+      Arch: HVMARM
+    c6g.4xlarge:
+      Arch: HVMARM
+    c6g.8xlarge:
+      Arch: HVMARM
+    c7g.2xlarge: 
+      Arch: HVMARM
+    c7g.4xlarge:
+      Arch: HVMARM
+    c7g.medium:
+      Arch: HVMARM
+    c7g.large:
+      Arch: HVMARM
+    c7g.xlarge:
+      Arch: HVMARM
+    t4g.micro:
+      Arch: HVMARM
+    t4g.small:
+      Arch: HVMARM
+    t4g.medium:
+      Arch: HVMARM
+    t4g.large:
+      Arch: HVMARM
+  AWSRegionArch2AMI:
+    ap-northeast-1:
+      HVM64: ami-0c1638aa346a43fe8
+      HVMARM: ami-0b37f69793d1b41e6
+    ap-northeast-2:
+      HVM64: ami-05377cf8cfef186c2
+      HVMARM: ami-051645cdefbf4194a
+    ap-southeast-1:
+      HVM64: ami-0afc7fe9be84307e4
+      HVMARM: ami-0b1bc05f3082a70a4
+    ap-southeast-2:
+      HVM64: ami-06a0b33485e9d1cf1
+      HVMARM: ami-0bc8d8ff75a022b42
+    eu-central-1:
+      HVM64: ami-02b7d5b1e55a7b5f1
+      HVMARM: ami-0cd3f0d8daa83abeb
+    eu-west-1:
+      HVM64: ami-03d8b47244d950bbb
+      HVMARM: ami-0037378fe3e346726
+    sa-east-1:
+      HVM64: ami-0b5a42ccb0a949cf1
+      HVMARM: ami-0bade75373b03dc55
+    us-east-1:
+      HVM64: ami-0953476d60561c955
+      HVMARM: ami-05a3e0187917e3e24
+    us-west-1:
+      HVM64: ami-07706bb32254a7fe5
+      HVMARM: ami-0d1bdfa84bf5df41a
+    us-west-2:
+      HVM64: ami-04999cd8f2624f834
+      HVMARM: ami-00565a15a71e4402a
+    eu-north-1:
+      HVM64: ami-00f34bf9aeacdf007
+      HVMARM: ami-0430bc22c15775e7f
+    ap-south-1:
+      HVM64: ami-0af9569868786b23a
+      HVMARM: ami-094ead6eb0a3fed45
+    eu-west-3:
+      HVM64: ami-074e262099d145e90
+      HVMARM: ami-05c77984cfc91cb55
+    eu-west-2:
+      HVM64: ami-0fc32db49bc3bfbb1
+      HVMARM: ami-057509923ceb4cc16
+    ap-northeast-3:
+      HVM64: ami-0880b5f3e22dd20a6
+      HVMARM: ami-0ab2b028b9cd2705f
+    ca-central-1:
+      HVM64: ami-049ae37f76c31ab26
+      HVMARM: ami-0c096d78166072826
+    us-east-2:
+      HVM64: ami-06c8f2ec674c67112
+      HVMARM: ami-0aa527419c9e68f0b
+Conditions:
+  HasSystemsManagerAccess: !Equals [!Ref SystemsManagerAccess, 'true']
+  HasAlertTopic: !Not [!Equals [!Ref ParentAlertStack, '']]
+  ConfigureFTP: !Equals [!Ref EnableFTP, "true"]
+Resources:
+  WebServer:
+    Type: AWS::EC2::Instance
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT15M
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
+          lamp_install:
+          - install_cfn
+          - install_lamp
+          - configure_lamp
+          - VHostfile
+        configure_lamp:
+          commands:
+            01_configure_lamp:
+              command: /tmp/setup.php
+            02_set_mysql_root_password:
+              command: !Sub |
+                mysqladmin -u root password '${DBRootPassword}'
+              test: !Sub |
+                $(mysql ${DBName} -u root --password='${DBRootPassword}' >/dev/null 2>&1 </dev/null); (( $? != 0 ))
+            03_create_database:
+              command: !Sub |
+                mysql -u root --password='${DBRootPassword}' < /tmp/setup.mysql
+              test: !Sub |
+                $(mysql ${DBName} -u root --password='${DBRootPassword}' >/dev/null 2>&1 </dev/null); (( $? !=0))
+            04_configure_ftp:
+              command: "./tmp/setup.ftp"
+        install_cfn:
+          files:
+            /etc/cfn/cfn-hup.conf:
+              content: !Sub |
+                [main]
+                stack= ${AWS::StackId}
+                region=${AWS::Region}
+              group: root
+              mode: '000400'
+              owner: root
+            /etc/cfn/hooks.d/cfn-auto-reloader.conf:
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.WebServer.Metadata.AWS::CloudFormation::Init
+                action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource WebServer --configsets lamp_install --url https://stackbuilder.amazonaws.com
+              group: root
+              mode: '000400'
+              owner: root
+          services:
+            sysvinit:
+              cfn-hup:
+                enabled: true
+                ensureRunning: true
+                files:
+                - /etc/cfn/cfn-hup.conf
+                - /etc/cfn/hooks.d/cfn-auto-reloader.conf
+        VHostfile:
+          files:
+            '/etc/httpd/conf.d/site.conf':
+              content: !Sub |
+                <virtualhost *:80>
+                servername  ${servername}
+                ServerAlias ${servername}
+                Documentroot "/var/www/html"
+                
+                <Directory "/var/www/html">
+                    Options -Indexes +FollowSymLinks
+                    AllowOverride All
+                    DirectoryIndex index.php  index.html index.htm
+                    Require all granted
+                </Directory>
+                <Location />
+                 SetOutputFilter DEFLATE
+                 BrowserMatch ^Mozilla/4 gzip-only-text/html
+                 BrowserMatch ^Mozilla/4\.0[678] no-gzip
+                 BrowserMatch \bMSI[E] !no-gzip !gzip-only-text/html
+                 SetEnvIfNoCase Request_URI \.(?:gif|jpe?g|png|swf|flv|pdf|exe|t?gz|zip|bz2|sit|rar)$ no-gzip dont-vary
+                </Location>
+                <Files ~ "\.(css|js|html|htm|txt|json|xml)$">
+                 SetOutputFilter DEFLATE
+                </Files>
+                KeepAlive On
+                KeepAliveTimeout ${KeepAliveTimeout}
+                MaxKeepAliveRequests ${MaxKeepAliveRequests}
+                TimeOut ${TimeOut}
+                </virtualhost>
+              mode: "000644"
+              owner: root
+              group: root
+ 
+        install_lamp:
+          files:
+            '/tmp/setup.php':
+              content: !Sub |
+                #!/bin/bash -xe
+                dnf install -y php${PHPVersion} php${PHPVersion}-cli php${PHPVersion}-common php${PHPVersion}-fpm php${PHPVersion}-mbstring php${PHPVersion}-gd php${PHPVersion}-mysqlnd php${PHPVersion}-intl  php${PHPVersion}-xml php${PHPVersion}-pdo php${PHPVersion}-bcmath php${PHPVersion}-zip php${PHPVersion}-opcache php${PHPVersion}-gd php${PHPVersion}-odbc php${PHPVersion}-process  
+                dnf install -y mariadb105-server
+                systemctl start mariadb
+                systemctl enable  mariadb
+              group: root
+              mode: '000500'
+              owner: root
+            '/tmp/setup.mysql':
+              content: !Sub |
+                CREATE DATABASE ${DBName};
+                CREATE USER '${DBUser}'@'localhost' IDENTIFIED BY '${DBPassword}';
+                GRANT ALL ON ${DBName}.* TO '${DBUser}'@'localhost';
+                FLUSH PRIVILEGES;
+              group: root
+              mode: '000400'
+              owner: root
+            '/var/www/html/index.php':
+              content: |
+                <?php
+                phpinfo();
+                phpinfo(INFO_MODULES);
+                ?>
+              group: root
+              mode: '000755'
+              owner: root
+            '/tmp/setup.ftp':
+              content: !If 
+                - ConfigureFTP
+                - !Sub |
+                    #!/bin/bash
+                    sed -i 's/anonymous_enable=YES/anonymous_enable=NO/g' /etc/vsftpd/vsftpd.conf
+                    sed -i 's/listen=NO/listen=YES/g' /etc/vsftpd/vsftpd.conf
+                    sed -i 's/listen_ipv6=YES/listen_ipv6=NO/g' /etc/vsftpd/vsftpd.conf
+                    IP_ADDRESS=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
+                    if [ -z "$IP_ADDRESS" ]; then
+                      IP_ADDRESS=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
+                    fi
+                    cat <<EOF >> /etc/vsftpd/vsftpd.conf
+                    chroot_local_user=YES
+                    chroot_list_enable=YES
+                    chroot_list_file=/etc/vsftpd/chroot_list
+                    pasv_promiscuous=YES
+                    pasv_max_port=24200
+                    pasv_min_port=24000
+                    EOF
+                    echo "pasv_address=\$IP_ADDRESS" >> /etc/vsftpd/vsftpd.conf
+                    cat <<EOF > /etc/vsftpd/chroot_list
+                    ${FTPUser}
+                    EOF
+                    useradd -m -d /var/www/html -s /bin/bash ${FTPUser} >/dev/null 2>&1
+                    echo '${FTPUser}:${FTPPassword}' | chpasswd
+                    setfacl  -R -m u:${FTPUser}:rwx /var/www/
+                    systemctl restart vsftpd
+                    systemctl restart httpd
+                - |
+                    #!/bin/bash
+                    # FTP disabled – nothing to do
+                    exit 0
+              group: root
+              mode: '000750'
+              owner: root
+          packages:
+            yum:
+              httpd: []
+              vsftpd: !If
+                - ConfigureFTP
+                - [""]  
+                - !Ref "AWS::NoValue"  
+          services:
+            sysvinit:
+              httpd:
+                enabled: true
+                ensureRunning: true
+              vsftpd:
+                enabled: !If [ConfigureFTP, "true", "false"]
+                ensureRunning: !If [ConfigureFTP, "true", "false"]
+
+    Properties:
+      IamInstanceProfile: !Ref InstanceProfile
+      ImageId: !FindInMap [AWSRegionArch2AMI, !Ref 'AWS::Region', !FindInMap [AWSInstanceType2Arch, !Ref InstanceType, Arch]]
+      InstanceType:
+        Ref: InstanceType
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: false
+          DeviceIndex: "0"
+          GroupSet:
+            - Ref: "WebServerSecurityGroup"
+          SubnetId:
+            Ref: "VPCSubnet"
+      KeyName:
+        Ref: KeyName
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}'
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: !Ref EC2VolumeSizes
+            VolumeType: gp3
+      UserData:
+        Fn::Base64: !Sub |
+           #!/bin/bash -xe
+           dnf update -y
+           dnf update -y aws-cfn-bootstrap
+           dnf install amazon-cloudwatch-agent -y
+           curl -so /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json https://raw.githubusercontent.com/kkpkishan/amazon-cloudwatch-agent/main/amazon-cloudwatch-agent-basic.json
+           systemctl restart amazon-cloudwatch-agent
+           systemctl enable amazon-cloudwatch-agent
+           /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource WebServer --configsets lamp_install --region ${AWS::Region}
+           /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource WebServer --region ${AWS::Region}
+  WebServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Enable HTTP access via port 80 locked down to the load balancer + SSH access"
+      VpcId: !Ref VPCID
+      SecurityGroupIngress:
+      - CidrIp: 0.0.0.0/0
+        FromPort: 80
+        IpProtocol: tcp
+        ToPort: 80
+      - CidrIp: !Ref SSHLocation
+        FromPort: 22
+        IpProtocol: tcp
+        ToPort: 22
+      - CidrIp: !Ref FTPLocation
+        FromPort: 21
+        IpProtocol: tcp
+        ToPort: 21
+      - CidrIp: !Ref FTPLocation
+        FromPort: 24000
+        IpProtocol: tcp
+        ToPort: 24200
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}'
+  IAMRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: 'ec2.amazonaws.com'
+          Action: 'sts:AssumeRole'
+      Policies:
+      - !If
+        - HasSystemsManagerAccess
+        - PolicyName: ssm
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+              - 'ssmmessages:*' # SSM Agent by https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-setting-up-messageAPIs.html
+              - 'ssm:UpdateInstanceInformation' # SSM agent by https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-setting-up-messageAPIs.html
+              - 'ec2messages:*' # SSM Session Manager by https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-setting-up-messageAPIs.html
+              Resource: '*'
+        - !Ref 'AWS::NoValue'
+      - PolicyName: 'ec2'
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - 'ec2:AssociateAddress'
+            - 'ec2:DescribeInstances'
+            - 'ec2:DescribeVolumeStatus'
+            - 'ec2:DescribeTags'
+            - 'ec2:DescribeVolumes'
+            - 'cloudwatch:GetMetricStatistics'
+            - 'cloudwatch:ListMetrics'
+            - 'cloudwatch:PutMetricData'
+            - 'cloudformation:DescribeStackResources'
+            - 'cloudformation:DescribeStackResource'
+            - 'cloudformation:DescribeStacks'
+            - 'cloudformation:ListStackResources'
+            - 'elasticloadbalancing:Describe*'
+            Resource:
+            - '*'
+  InstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      Roles:
+      - !Ref IAMRole
+  CPUTooHighAlarm:
+    Condition: HasAlertTopic
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      AlarmDescription: 'Scale-up if CPU > 80% for 5 minutes'
+      Namespace: 'AWS/EC2'
+      MetricName: CPUUtilization
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 80
+      AlarmActions:
+      - {'Fn::ImportValue': !Sub '${ParentAlertStack}-TopicARN'}
+      OKActions:
+      - {'Fn::ImportValue': !Sub '${ParentAlertStack}-TopicARN'}
+      Dimensions:
+      - Name: InstanceId
+        Value: !Ref WebServer
+  RecoveryAlarm:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      AlarmDescription: 'Recovering instance when underlying hardware fails.'
+      Namespace: 'AWS/EC2'
+      MetricName: StatusCheckFailed_System
+      Statistic: Minimum
+      Period: 60
+      EvaluationPeriods: 5
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 0
+      AlarmActions:
+      - !Sub 'arn:aws:automate:${AWS::Region}:ec2:recover'
+      Dimensions:
+      - Name: InstanceId
+        Value: !Ref WebServer
+  SystemStatusAlarm:
+    Condition: HasAlertTopic
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      AlarmDescription: 'SystemStatus over last 0 to 1.'
+      Namespace: 'AWS/EC2'
+      MetricName: StatusCheckFailed_System
+      Statistic: Minimum
+      Period: 60
+      EvaluationPeriods: 2
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 0
+      AlarmActions:
+      - {'Fn::ImportValue': !Sub '${ParentAlertStack}-TopicARN'}
+      OKActions:
+      - {'Fn::ImportValue': !Sub '${ParentAlertStack}-TopicARN'}
+      Dimensions:
+      - Name: InstanceId
+        Value: !Ref WebServer
+  InstanceStatusAlarm:
+    Condition: HasAlertTopic
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      AlarmDescription: 'InstanceStatus over last 0 to 1.'
+      Namespace: 'AWS/EC2'
+      MetricName: StatusCheckFailed_Instance
+      Statistic: Minimum
+      Period: 60
+      EvaluationPeriods: 3
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 0
+      AlarmActions:
+      - {'Fn::ImportValue': !Sub '${ParentAlertStack}-TopicARN'}
+      OKActions:
+      - {'Fn::ImportValue': !Sub '${ParentAlertStack}-TopicARN'}
+      Dimensions:
+      - Name: InstanceId
+        Value: !Ref WebServer
